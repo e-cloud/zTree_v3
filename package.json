@@ -1,0 +1,77 @@
+{
+  "name": "zTree",
+  "description": "jquery tree plugin",
+  "keywords": [
+    "jQuery",
+    "tree",
+    "ui"
+  ],
+  "version": "3.5.24",
+  "author": {
+    "name": "Zhang QiGang",
+    "email": "hunter.z@263.net",
+    "url": "https://github.com/zTree/zTree_v3"
+  },
+  "maintainers": [
+    {
+      "name": "Zhang QiGang",
+      "email": "hunter.z@263.net",
+      "url": "http://www.ztree.me/"
+    }
+  ],
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.ztree.me/v3/main.php#_license"
+    }
+  ],
+  "bugs": "https://github.com/zTree/zTree_v3/issues",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:zTree/zTree_v3.git"
+  },
+  "homepage": "http://www.ztree.me/",
+  "demo": "http://www.ztree.me/v3/demo.php",
+  "docs": "http://www.ztree.me/v3/api.php",
+  "dependencies": {
+    "jquery": ">=1.4.4"
+  },
+  "devDependencies": {
+    "conventional-changelog": "^1.1.0",
+    "eslint": "^3.0.0",
+    "eslint-config-airbnb-base": "^4.0.0",
+    "eslint-plugin-import": "^1.5.0",
+    "ghooks": "^1.2.1",
+    "validate-commit-msg": "^2.6.1"
+  },
+  "config": {
+    "validate-commit-msg": {
+      "types": [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "example",
+        "perf",
+        "test",
+        "chore",
+        "revert"
+      ],
+      "warnOnFail": false,
+      "maxSubjectLength": 72,
+      "subjectPattern": ".+",
+      "subjectPatternErrorMsg": "subject does not match subject pattern!",
+      "helpMessage": "\n# allowed type: feat, fix, docs, style, refactor, example, perf, test, chore, revert\n# subject no more than 50 chars\n# a body line no more than 72 chars"
+    },
+    "ghooks": {
+      "//": {
+        "pre-commit": "check code style",
+        "post-checkout": "npm install"
+      },
+      "commit-msg": "validate-commit-msg",
+      "post-rewrite": "npm install",
+      "post-merge": "npm install"
+    }
+  }
+}
