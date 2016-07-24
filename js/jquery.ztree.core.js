@@ -57,7 +57,7 @@
 			}
 		},
 		//default setting of core
-		_setting = {
+		defaultSetting = {
 			treeId: "",
 			treeObj: null,
 			view: {
@@ -132,18 +132,22 @@
 		 * @private
 		 */
 		_initRoot = function (setting) {
-			var r = data.getRoot(setting);
-			if (!r) {
-				r = {};
-				data.setRoot(setting, r);
+			var root = data.getRoot(setting);
+
+			// set a plain old empty object as root
+			if (!root) {
+				root = {};
+				data.setRoot(setting, root);
 			}
-			r[setting.data.key.children] = [];
-			r.expandTriggerFlag = false;
-			r.curSelectedList = [];
-			r.noSelection = true;
-			r.createdNodes = [];
-			r.zId = 0;
-			r._ver = (new Date()).getTime();
+
+			// init some default properties of root
+			root[setting.data.key.children] = []; // root node's children
+			root.expandTriggerFlag = false; // flag indicating whether trigger expand event on root node
+			root.curSelectedList = []; // the selected node list
+			root.noSelection = true; // flag indicating whether enable selection
+			root.createdNodes = []; // all the tree node created are cached here
+			root.zId = 0; //
+			root._ver = (new Date()).getTime(); // version number
 		},
 		/**
 		 * default cache of core
@@ -198,6 +202,7 @@
 			o.bind(c.SELECTED, function (event, treeId, node) {
 				tools.apply(setting.callback.onSelected, [treeId, node]);
 			});
+
 			o.bind(c.UNSELECTED, function (event, treeId, node) {
 				tools.apply(setting.callback.onUnSelected, [treeId, node]);
 			});
@@ -208,17 +213,17 @@
 		 * @private
 		 */
 		_unbindEvent = function (setting) {
-			var o = setting.treeObj,
-				c = consts.event;
-			o.unbind(c.NODECREATED)
-				.unbind(c.CLICK)
-				.unbind(c.EXPAND)
-				.unbind(c.COLLAPSE)
-				.unbind(c.ASYNC_SUCCESS)
-				.unbind(c.ASYNC_ERROR)
-				.unbind(c.REMOVE)
-				.unbind(c.SELECTED)
-				.unbind(c.UNSELECTED);
+			var treeElement = setting.treeObj,
+				constEvents = consts.event;
+			treeElement.unbind(constEvents.NODECREATED)
+				.unbind(constEvents.CLICK)
+				.unbind(constEvents.EXPAND)
+				.unbind(constEvents.COLLAPSE)
+				.unbind(constEvents.ASYNC_SUCCESS)
+				.unbind(constEvents.ASYNC_ERROR)
+				.unbind(constEvents.REMOVE)
+				.unbind(constEvents.SELECTED)
+				.unbind(constEvents.UNSELECTED);
 		},
 		/**
 		 * default event proxy of core
@@ -535,7 +540,7 @@
 			 * @param {Object} source
 			 */
 			exSetting: function (source) {
-				$.extend(true, _setting, source);
+				$.extend(true, defaultSetting, source);
 			},
 
 			/**
@@ -826,7 +831,7 @@
 			},
 
 			/**
-			 * get the root node
+			 * get the root if possible
 			 * @param {ZTreeSetting} setting
 			 * @returns {null}
 			 */
@@ -1060,36 +1065,38 @@
 			},
 
 			/**
-			 * bind events for proxy from the tree object
+			 * bind events to the tree element with proxy
 			 * @param setting
 			 */
 			bindTree: function (setting) {
 				var eventParam = {
-						treeId: setting.treeId
-					},
-					o = setting.treeObj;
+					treeId: setting.treeId
+				};
+				var treeElement = setting.treeObj;
+
 				if (!setting.view.txtSelectedEnable) {
 					// for can't select text
-					o.bind('selectstart', handler.onSelectStart).css({
+					treeElement.bind('selectstart', handler.onSelectStart).css({
 						"-moz-user-select": "-moz-none"
 					});
 				}
-				o.bind('click', eventParam, event.proxy);
-				o.bind('dblclick', eventParam, event.proxy);
-				o.bind('mouseover', eventParam, event.proxy);
-				o.bind('mouseout', eventParam, event.proxy);
-				o.bind('mousedown', eventParam, event.proxy);
-				o.bind('mouseup', eventParam, event.proxy);
-				o.bind('contextmenu', eventParam, event.proxy);
+
+				treeElement.bind('click', eventParam, event.proxy);
+				treeElement.bind('dblclick', eventParam, event.proxy);
+				treeElement.bind('mouseover', eventParam, event.proxy);
+				treeElement.bind('mouseout', eventParam, event.proxy);
+				treeElement.bind('mousedown', eventParam, event.proxy);
+				treeElement.bind('mouseup', eventParam, event.proxy);
+				treeElement.bind('contextmenu', eventParam, event.proxy);
 			},
 
 			/**
-			 * unbind the proxyed events
+			 * unbind all the registered events of target tree
 			 * @param setting
 			 */
 			unbindTree: function (setting) {
-				var o = setting.treeObj;
-				o.unbind('selectstart', handler.onSelectStart)
+				var treeElement = setting.treeObj;
+				treeElement.unbind('selectstart', handler.onSelectStart)
 					.unbind('click', event.proxy)
 					.unbind('dblclick', event.proxy)
 					.unbind('mouseover', event.proxy)
@@ -2396,35 +2403,57 @@
 
 		/**
 		 * create a zTree
-		 * @param obj
-		 * @param zSetting
-		 * @param zNodes
+		 * @param jqElement
+		 * @param userSetting
+		 * @param dataNodes
 		 * @returns {*}
 		 */
-		init: function (obj, zSetting, zNodes) {
-			var setting = tools.clone(_setting);
-			$.extend(true, setting, zSetting);
-			setting.treeId = obj.attr("id");
-			setting.treeObj = obj;
+		init: function (jqElement, userSetting, dataNodes) {
+			// deep clone the default setting for independence
+			var setting = tools.clone(defaultSetting);
+
+			// deep merge the userSetting to the defaultSetting
+			$.extend(true, setting, userSetting);
+
+			// store reference of the tree element and clean its inner content
+			setting.treeId = jqElement.attr("id");
+			setting.treeObj = jqElement;
 			setting.treeObj.empty();
+
+			// cache the setting object
 			settings[setting.treeId] = setting;
-			//For some older browser,(e.g., ie6)
+
+			// For some older browser,(e.g., ie6)
+			// todo: to be removed
 			if (typeof document.body.style.maxHeight === "undefined") {
 				setting.view.expandSpeed = "";
 			}
+
+			// initiate the root object of the tree
 			data.initRoot(setting);
-			var root = data.getRoot(setting),
-				childKey = setting.data.key.children;
-			zNodes = zNodes ? tools.clone(tools.isArray(zNodes) ? zNodes : [zNodes]) : [];
+
+			var root = data.getRoot(setting);
+			var childKey = setting.data.key.children;
+
+			// deep clone the data to avoid duplication with repeated initialization?
+			dataNodes = dataNodes ? tools.clone(tools.isArray(dataNodes) ? dataNodes : [dataNodes]) : [];
+
+			// ensure the data is tree-like structure
 			if (setting.data.simpleData.enable) {
-				root[childKey] = data.transformTozTreeFormat(setting, zNodes);
+				root[childKey] = data.transformTozTreeFormat(setting, dataNodes);
 			} else {
-				root[childKey] = zNodes;
+				root[childKey] = dataNodes;
 			}
 
+			// initiate the cache functionality
 			data.initCache(setting);
+
+			// clean the event listeners on the tree element
 			event.unbindTree(setting);
+
+			// initiate the event listeners on the tree element
 			event.bindTree(setting);
+
 			event.unbindEvent(setting);
 			event.bindEvent(setting);
 
