@@ -813,13 +813,38 @@
 			var childKey = setting.data.key.children;
 			return (setting.async.enable && node && node.isParent && !(node.zAsync || (node[childKey] && node[childKey].length > 0)));
 		},
-		clone: function (obj){
-			if (obj === null) return null;
-			var o = tools.isArray(obj) ? [] : {};
-			for(var i in obj){
-				o[i] = (obj[i] instanceof Date) ? new Date(obj[i].getTime()) : (typeof obj[i] === "object" ? tools.clone(obj[i]) : obj[i]);
+		clone: function clone(obj) {
+			var copy;
+
+			// Handle the 3 simple types, and null or undefined
+			if (null == obj || "object" != typeof obj) return obj;
+
+			// Handle Date
+			if (obj instanceof Date) {
+				copy = new Date();
+				copy.setTime(obj.getTime());
+				return copy;
 			}
-			return o;
+
+			// Handle Array
+			if (obj instanceof Array) {
+				copy = [];
+				for (var i = 0, len = obj.length; i < len; i++) {
+					copy[i] = clone(obj[i]);
+				}
+				return copy;
+			}
+
+			// Handle Object
+			if (obj instanceof Object) {
+				copy = {};
+				for (var attr in obj) {
+					if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
+				}
+				return copy;
+			}
+
+			throw new Error("Unable to copy obj! Its type isn't supported.");
 		},
 		eqs: function(str1, str2) {
 			return str1.toLowerCase() === str2.toLowerCase();
@@ -1573,7 +1598,7 @@
 				}
 			}
 		},
-		init: function(obj, zSetting, zNodes) {
+		init: function(obj, zSetting, zNodes, skipDataClone) {
 			var setting = tools.clone(_setting);
 			$.extend(true, setting, zSetting);
 			setting.treeId = obj.attr("id");
@@ -1587,7 +1612,7 @@
 			data.initRoot(setting);
 			var root = data.getRoot(setting),
 			childKey = setting.data.key.children;
-			zNodes = zNodes ? tools.clone(tools.isArray(zNodes)? zNodes : [zNodes]) : [];
+			zNodes = skipDataClone ? zNodes : (zNodes ? tools.clone(tools.isArray(zNodes)? zNodes : [zNodes]) : []);
 			if (setting.data.simpleData.enable) {
 				root[childKey] = data.transformTozTreeFormat(setting, zNodes);
 			} else {
